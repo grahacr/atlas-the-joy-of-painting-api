@@ -5,6 +5,7 @@ const { connection, insertEpisodes } = require('./db');
 const moment = require('moment');
 const regex = new RegExp('pattern');
 
+
 const episodes = [];
 
 fs.createReadStream(path.join(__dirname, 'data','episodes'))
@@ -20,7 +21,7 @@ fs.createReadStream(path.join(__dirname, 'data','episodes'))
 
             const month = moment(airDateFormat).format('MMMM');
             episodes.push({
-                title: title,
+                painting_title: title,
                 air_date: airDateFormat,
                 month: month
             });
@@ -32,4 +33,3 @@ fs.createReadStream(path.join(__dirname, 'data','episodes'))
     .on('error', (err) => {
         console.error('error parsing csv file', err);
     });
-

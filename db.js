@@ -18,20 +18,18 @@ connection.connect(err => {
 });
 
 function insertEpisodes(episodes) {
-    episodes.forEach(episode => {
-        const { title, air_date, month } = episode;
-        const query = `INSERT IGNORE INTO episodes (title, air_date, month) VALUES (?, ?, ?)`;
-        connection.query(query, [title, air_date, month], (err, results) => {
-            if (err) {
-                console.error('error inserting episode', err);
-            } else {
-                if (results.affectedRows === 0) {
-                    console.log('Episode already exists. skipping insertion');
-                } else {
-                    console.log('Inserted episode', results);
+    episodes.forEach((episode) => {
+        connection.query(
+            `INSERT INTO episodes (painting_title, air_date, month) VALUES (?, ?, ?)`,
+            [episode.painting_title, episode.air_date, episode.month],
+            (err, results) => {
+                if (err) {
+                    console.error('Error inserting episode', err);
+                    return;
                 }
+                console.log(`Episode inserted! ID: ${results.insertId}`);
             }
-        });
+        )
     });
 }
 
