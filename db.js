@@ -20,12 +20,16 @@ connection.connect(err => {
 function insertEpisodes(episodes) {
     episodes.forEach(episode => {
         const { title, air_date, month } = episode;
-        const query = `INSERT INTO episodes (title, air_date, month) VALUES (?, ?, ?)`;
+        const query = `INSERT IGNORE INTO episodes (title, air_date, month) VALUES (?, ?, ?)`;
         connection.query(query, [title, air_date, month], (err, results) => {
             if (err) {
                 console.error('error inserting episode', err);
             } else {
-                console.log('Inserted episode', results);
+                if (results.affectedRows === 0) {
+                    console.log('Episode already exists. skipping insertion');
+                } else {
+                    console.log('Inserted episode', results);
+                }
             }
         });
     });
