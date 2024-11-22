@@ -28,8 +28,10 @@ function insertEpisodes(episodes) {
                     return;
                 }
                 console.log(`Episode inserted! ID: ${results.insertId}`);
+                // insertSubjects(results.insertId);
+                // insertColors(results.insertId);
             }
-        )
+        );
     });
 }
 

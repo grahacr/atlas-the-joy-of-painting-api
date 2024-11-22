@@ -5,31 +5,68 @@ const { connection, insertEpisodes } = require('./db');
 const moment = require('moment');
 const regex = new RegExp('pattern');
 
+class csvProcessor {
+    constructor(filePath, dbInsertFunction, hasHeaders = true) {
+        this.filePath = filePath;
+        this.dbInsertFunction = dbInsertFunction;
+        this.hasHeaders = hasHeaders;
+        this.data = [];
+    }
 
-const episodes = [];
+    processFile() {
+        console.log('starting file processing:', this.filePath);
+        if (this.hasHeaders) {
+            this.processWithHeaders();
+        } else {
+            this.processWithoutHeaders();
+        }
+    }
 
-fs.createReadStream(path.join(__dirname, 'data','episodes'))
-    .pipe(csvParser({ headers: false, skipEmptyLines: true }))
-    .on('data', (data) => {
-        const line = data[0].trim();
+    processWithHeaders() {
+        const headerOptions = { skipEmptyLines: true, headers: true };
+        console.log('starting file processing:', this.filePath)
+        fs.createReadStream(this.filePath)
+            .pipe(csvParser(headerOptions))
+            .on('data', (dataRow) => this.processData(dataRow))
+            .on('end', () => this.dbInsertFunction(this.data))
+            .on('error', (err) => console.error('Error parsing csv', err));
+    }
+
+    processWithoutHeaders() {
+        const fileContent = fs.readFileSync(this.filePath, 'utf-8');
+        const lines = fileContent.split('\n').map(line => line.trim());
+        lines.forEach(line => {
+            if (line) {
+                this.processData(line);
+            }
+        });
+        this.dbInsertFunction(this.data);
+    }
+    processData(data) {
+        throw new Error('processData method needs implementation in sublcass')
+    }
+}
+
+class episodesCSVProcesser extends csvProcessor {
+    constructor(filePath) {
+        super(filePath, insertEpisodes, false);
+    }
+    processData(line) {
         const match = line.match(/^"([^"]+)" \(([^)]+)\)$/);
-
         if (match) {
             const title = match[1];
             const airDateString = match[2];
             const airDateFormat = moment(airDateString, 'MMMM D, YYYY').format('YYYY-MM-DD');
-
             const month = moment(airDateFormat).format('MMMM');
-            episodes.push({
+            this.data.push({
                 painting_title: title,
                 air_date: airDateFormat,
                 month: month
             });
+        } else {
+            console.error('failed to match line', line);
         }
-    })
-    .on('end', () => {
-        insertEpisodes(episodes);
-    })
-    .on('error', (err) => {
-        console.error('error parsing csv file', err);
-    });
+    }
+}
+const episodesProcesser = new episodesCSVProcesser(path.join(__dirname, 'data', 'episodes'));
+episodesProcesser.processFile();
