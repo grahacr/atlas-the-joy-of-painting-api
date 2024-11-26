@@ -35,5 +35,51 @@ function insertEpisodes(episodes) {
     });
 }
 
+function insertSubjects(episodes) {
+    episodes.forEach(episode => {
+        if (episode.subjects && episode.subjects.length > 0) {
+            const episodeId = episode.episode_id;
+            const subjectValues = episode.subjects.map(subject => [episodeId, subject]);
 
-module.exports = { connection, insertEpisodes };
+            connection.query(
+                `INSERT INTO subjects (episode_id, subject_name) VALUES ?`,
+                [subjectValues],
+                (err, result) => {
+                    if (err) {
+                        console.error('Error inserting subjects:', err);
+                    } else {
+                        console.log(`Inserted ${result.affectedRows} subjects for episode ID ${episodeId}`);
+                    }
+                }
+            );
+        }
+    });
+}
+
+function insertColors(colorsData) {
+    console.log('Inserting colors for paintings..');
+    colorsData.forEach(colorEntry => {
+        const parsedColors = colorEntry.colors;
+        console.log('inserting colors for painting:', colorEntry.painting_title);
+
+        connection.query(
+            `INSERT INTO colors (painting_title, colors) VALUES (?, ?)`,
+            [colorEntry.painting_title, JSON.stringify(parsedColors)],
+            (err, result) => {
+                if (err) {
+                    console.error('Error inserting colors:', err);
+                } else {
+                    console.log(`Inserted ${result.affectedRows} colors for Episode ID ${episodeId}`);
+                }
+            }
+        );
+    });
+}
+
+
+module.exports = {
+    connection,
+    insertEpisodes,
+    insertColors,
+    insertSubjects
+};
