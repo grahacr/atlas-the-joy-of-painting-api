@@ -5,6 +5,7 @@ const { connection, findEpisodeIdbyTitle, normalizeTitle, insertEpisodes, insert
 const moment = require('moment');
 const { match } = require('assert');
 const regex = new RegExp('pattern');
+const csvWriter = require('csv-writer');
 
 class csvProcessor {
     constructor(filePath, dbInsertFunction, hasHeaders = true) {
@@ -61,28 +62,6 @@ class csvProcessor {
     }
 }
 
-class episodesCSVProcesser extends csvProcessor {
-    constructor(filePath) {
-        super(filePath, insertEpisodes, false);
-    }
-    processData(line) {
-        const match = line.match(/^"([^"]+)" \(([^)]+)\)(.*)$/);
-        if (match) {
-            const title = match[1].toLowerCase();
-            const airDateString = match[2];
-            const airDateFormat = moment(airDateString, 'MMMM D, YYYY').format('YYYY-MM-DD');
-            const month = moment(airDateFormat).format('MMMM');
-
-            this.data.push({
-                painting_title: title,
-                air_date: airDateFormat,
-                month: month
-            });
-        } else {
-            console.error('failed to match line', line);
-        }
-    }
-}
 
 class colorsCsvProcessor extends csvProcessor {
     constructor(filePath) {
@@ -92,6 +71,8 @@ class colorsCsvProcessor extends csvProcessor {
         let painting_title = dataRow['painting_title']?.trim();
         console.log('first colors painting title:', painting_title)
         let colors = dataRow['colors']?.trim();
+        const season = dataRow['season'];
+        const episode = dataRow['episode'];
 
         //console.log('Raw datarow:', dataRow);
         console.log('Raw colors value:', colors);
@@ -102,16 +83,7 @@ class colorsCsvProcessor extends csvProcessor {
             return;
         }
         try {
-            painting_title = normalizeTitle(painting_title);
-            console.log('painting title:', painting_title);
-
-            let parsedColors;
-            try {
-                parsedColors = JSON.parse(colors);
-            } catch (parseError) {
-                console.error('error parsing color array:', colors, parseError);
-                return;
-            }
+            const parsedColors = colors.split(',').map(color => color.trim());
             const episodeId = await findEpisodeIdbyTitle(painting_title);
             if (!episodeId) {
                 // console.log('no episode found for painting title:', painting_title);
@@ -119,6 +91,8 @@ class colorsCsvProcessor extends csvProcessor {
             }
             this.data.push({
                 episode_id: episodeId,
+                season: season,
+                episode: episode,
                 colors: parsedColors
             });
         } catch (err) {
@@ -138,15 +112,21 @@ class subjectsCsvProcessor extends csvProcessor {
 
         const painting_title = dataRow['TITLE']?.trim().toLowerCase();
         let subjects = [];
-
-        //console.log('Processed subjects for painting:', painting_title)
-
-        const matchEpisode = await findEpisodeIdbyTitle(painting_title);
-        if (!matchEpisode) {
-            // console.log('No episode found for painting title:', painting_title);
+        const episodeSeason = dataRow['EPISODE'];
+        const seasonEpisodeMatch = episodeSeason.match(/^S(\d{2})E(\d{2})$/);
+        if (!seasonEpisodeMatch) {
+            console.log('Invalid EPISODE format for painting:', painting_title);
             return;
         }
-        const episodeId = matchEpisode
+        const season = parseInt(seasonEpisodeMatch[1], 10);
+        const episode = parseInt(seasonEpisodeMatch[2], 10);
+
+        const episodeId = await findEpisodeIdbyTitle(painting_title);
+        if (!episodeId) {
+            console.log('no episode found for painting:', painting_title);
+            return;
+        }
+
 
         const subjectColumns = [
             'APPLE_FRAME', 'AURORA_BOREALIS', 'BARN,BEACH', 'BOAT,BRIDGE', 'BUILDING', 'BUSHES',
@@ -168,10 +148,11 @@ class subjectsCsvProcessor extends csvProcessor {
 
         //console.log('Subjects to be inserted:', subjects)
         if (subjects.length > 0) {
-            const subjectValues = subjects.map(subject => [episodeId, subject]);
             //console.log('inserting subjects for episode ID:', matchEpisode.episode_id, subjectValues)
             this.data.push({
                 episode_id: episodeId,
+                season: season,
+                episode: episode,
                 subjects: subjects
             });
             //console.log('Processed subjects for painting:', painting_title);

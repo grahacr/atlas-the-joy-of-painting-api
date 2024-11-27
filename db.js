@@ -26,29 +26,37 @@ function normalizeTitle(title) {
 
 async function insertEpisodes(episodes) {
     for (const episode of episodes) {
-        await new Promise((resolve, reject) => {
-            connection.query(
-                `INSERT INTO episodes (painting_title, air_date, month) VALUES (?, ?, ?)`,
-                [episode.painting_title, episode.air_date, episode.month],
-                async (err, results) => {
-                    if (err) {
-                        console.error('Error inserting episode', err);
-                        reject(err);
-                        return;
-                    }
-                    const episodeId = results.insertId;
-                    // console.log(`Episode inserted! ID: ${results.insertId}`);
-                    try {
-                        await insertSubjects([{ episode_id: episodeId, subjects: episode.subjects }]);
-                        await insertColors([{ episode_id: episodeId, colors: episode.colors }]);
-                        resolve();
-                    } catch (error) {
-                        reject(error);
-                    }
-                }
-            );
-        });
+        
+        const existingEpisodeId = await findEpisodeIdbyTitle(episode.painting_title);
+        
+        if (existingEpisodeId) {
+            console.log(`episode with title "${episode.painting_title}" already exists with ID ${existingEpisodeId}`);
+
+            await insertSubjects([{ episode_id: existingEpisodeId, subjects: episode.subjects }]);
+            await insertColors([{ episode_id: existingEpisodeId, colors: episode.colors }]);
+        } else {
+            const episodeId = await insertEpisode(episode);
+            console.log('Inserting subjects and colors for episode ID:', episodeId);
+            await insertSubjects([{ episode_id: episodeId, subjects: episode.subjects }]);
+            await insertColors([{ episode_id: episodeId, colors: episode.colors }]);
+        }
     }
+}
+
+function insertEpisode(episode) {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `INSERT INTO episodes (painting_title, air_date, month) VALUES (?, ?, ?)`,
+            [episode.painting_title, episode.air_date, episode.month],
+            (err, results) => {
+                if (err) {
+                    console.error('Error inserting episode', err);
+                    return reject(err);
+                }
+                resolve(results.insertId);
+            }
+        );
+    });
 }
 
 function findEpisodeIdbyTitle(painting_title) {
@@ -57,7 +65,7 @@ function findEpisodeIdbyTitle(painting_title) {
         connection.query('SELECT episode_id FROM episodes WHERE LOWER(painting_title) = ?', [normalizedTitle], (err, results) => {
             if (err) {
                 console.error('Error finding episode ID:', err);
-                rej(err);
+                return rej(err);
             } else {
                 if (results.length > 0) {
                     res(results[0].episode_id);
@@ -90,6 +98,8 @@ function insertSubjects(subjectData) {
                         }
                     }
                 );
+            } else {
+                console.log('No subjects to insert for episode ID:', episodeId);
             }
         });
     } else {
