@@ -1,42 +1,38 @@
 const fs = require('fs');
 const path = require('path');
 const Papa = require('papaparse');
-const { connection, findEpisodeIdbyTitle, normalizeTitle, insertEpisodes, insertSubjects, insertColors } = require('./db');
-const moment = require('moment');
-const { match } = require('assert');
+const { connection, findEpisodeIdbyTitle } = require('./db');
+// const moment = require('moment');
+// const { match } = require('assert');
 const regex = new RegExp('pattern');
-const csvWriter = require('csv-writer');
+const { createObjectCsvWriter } = require('csv-writer');
+const { escapeId } = require('mysql2');
+
+function normalizeTitle(title) {
+    return title
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, '')
+        .replace(/\s+/g, ' ')
+        .replace(/^./, str => str.toUpperCase());
+}
 
 class csvProcessor {
-    constructor(filePath, dbInsertFunction, hasHeaders = true) {
+    constructor(filePath, episodeData) {
         this.filePath = filePath;
-        this.dbInsertFunction = dbInsertFunction;
-        this.hasHeaders = hasHeaders;
-        this.data = [];
+        this.episodeData = episodeData;
     }
-
+    
     async processFile() {
-        // console.log('starting file processing:', this.filePath);
-        if (this.hasHeaders) {
-            await this.processWithHeaders();
-        } else {
-            await this.processWithoutHeaders();
-        }
-    }
-
-    async processWithHeaders() {
-        const headerOptions = { skipEmptyLines: true, header: true };
-        // console.log('starting file processing:', this.filePath)
+        const fileStream = fs.createReadStream(this.filePath, 'utf-8');
         return new Promise((resolve, reject) => {
-           const fileStream = fs.createReadStream(this.filePath, 'utf-8');
             Papa.parse(fileStream, {
                 header: true,
                 skipEmptyLines: true,
-                complete:(results) => {
+                complete: (results) => {
                     results.data.forEach((dataRow) => {
                         this.processData(dataRow);
                     });
-                    this.dbInsertFunction(this.data);
                     resolve();
                 },
                 error: (err) => {
@@ -47,30 +43,23 @@ class csvProcessor {
         });
     }
 
-    async processWithoutHeaders() {
-        const fileContent = fs.readFileSync(this.filePath, 'utf-8');
-        const lines = fileContent.split('\n').map(line => line.trim());
-        for (const line of lines) {
-            if (line) {
-                this.processData(line);
-            }
-        };
-        this.dbInsertFunction(this.data);
-    }
-    processData(data) {
+    processData() {
         throw new Error('processData method needs implementation in sublcass')
     }
 }
 
 
 class colorsCsvProcessor extends csvProcessor {
-    constructor(filePath) {
-        super(filePath, insertColors, true);
+    constructor(filePath, episodeData) {
+        super(filePath, episodeData);
     }
+
     async processData(dataRow) {
         let painting_title = dataRow['painting_title']?.trim();
-        console.log('first colors painting title:', painting_title)
-        let colors = dataRow['colors']?.trim();
+        const cleanedTitle = normalizeTitle(painting_title);
+
+        console.log('first colors painting title:', cleanedTitle)
+        const colors = dataRow['colors']?.trim();
         const season = dataRow['season'];
         const episode = dataRow['episode'];
 
@@ -79,55 +68,56 @@ class colorsCsvProcessor extends csvProcessor {
 
         // console.log('Processed colors for painting:', painting_title);
         if (!colors || typeof colors !== 'string') {
-            console.log('No color data found for painting:', painting_title);
+            console.log('No color data found for painting:', cleanedTitle);
             return;
         }
-        try {
-            const parsedColors = colors.split(',').map(color => color.trim());
-            const episodeId = await findEpisodeIdbyTitle(painting_title);
-            if (!episodeId) {
-                // console.log('no episode found for painting title:', painting_title);
-                return;
-            }
-            this.data.push({
+        const parsedColors = colors.split(',').map(color => color.trim());
+        const episodeId = await findEpisodeIdbyTitle(cleanedTitle);
+        if (!episodeId) {
+            const episodeId = `${season}-${episode}`;
+        }
+
+        if (!this.episodeData[episodeId]) {
+            this.episodeData[episodeId] = {
                 episode_id: episodeId,
                 season: season,
                 episode: episode,
-                colors: parsedColors
-            });
-        } catch (err) {
-            console.log('No colors found for painting:', painting_title);
+                painting_title: cleanedTitle,
+                colors: parsedColors.join(', '),
+                subjects: []
+            };
+        } else {
+            this.episodeData[episodeId].colors = parsedColors.join(', ');
             }
         }
     }
 
-
-
 class subjectsCsvProcessor extends csvProcessor {
-    constructor(filePath) {
-        super(filePath, insertSubjects, true);
+    constructor(filePath, episodeData) {
+        super(filePath, episodeData);
     }
     async processData(dataRow) {
         // console.log(dataRow)
 
         const painting_title = dataRow['TITLE']?.trim().toLowerCase();
+        const cleanedTitle = normalizeTitle(painting_title);
+
         let subjects = [];
         const episodeSeason = dataRow['EPISODE'];
         const seasonEpisodeMatch = episodeSeason.match(/^S(\d{2})E(\d{2})$/);
         if (!seasonEpisodeMatch) {
-            console.log('Invalid EPISODE format for painting:', painting_title);
+            console.log('Invalid EPISODE format for painting:', cleanedTitle);
             return;
         }
         const season = parseInt(seasonEpisodeMatch[1], 10);
         const episode = parseInt(seasonEpisodeMatch[2], 10);
 
-        const episodeId = await findEpisodeIdbyTitle(painting_title);
+        const episodeId = await findEpisodeIdbyTitle(cleanedTitle);
+        console.log('Found episodeId:', episodeId, 'for title:', cleanedTitle)
         if (!episodeId) {
-            console.log('no episode found for painting:', painting_title);
+            console.log('no episode found for painting:', cleanedTitle);
             return;
         }
-
-
         const subjectColumns = [
             'APPLE_FRAME', 'AURORA_BOREALIS', 'BARN,BEACH', 'BOAT,BRIDGE', 'BUILDING', 'BUSHES',
             'CABIN', 'CACTUS', 'CIRCLE_FRAME', 'CIRRUS', 'CLIFF', 'CLOUDS', 'CONIFER', 'CUMULUS',
@@ -148,32 +138,58 @@ class subjectsCsvProcessor extends csvProcessor {
 
         //console.log('Subjects to be inserted:', subjects)
         if (subjects.length > 0) {
-            //console.log('inserting subjects for episode ID:', matchEpisode.episode_id, subjectValues)
-            this.data.push({
-                episode_id: episodeId,
-                season: season,
-                episode: episode,
-                subjects: subjects
-            });
-            //console.log('Processed subjects for painting:', painting_title);
+            if (!this.episodeData[episodeId]) {
+                this.episodeData[episodeId] = {
+                    episode_id: episodeId,
+                    season: season,
+                    episode, episode,
+                    painting_title: cleanedTitle,
+                    colors: '',
+                    subjects: subjects.join(', '),
+                };
+            } else {
+                this.episodeData[episodeId].subjects = subjects.join(', ');
+            }
         } else {
-            console.log('No subjects found for painting', painting_title);
+            console.log('No subjects found for painting:', painting_title)
         }
     }
 }
-    async function processAllData() {
-        const episodesFilePath = path.join(__dirname, 'data', 'episodes.csv');
-        console.log('Full episodes file path:', episodesFilePath);
-        const episodesProcesser = new episodesCSVProcesser(path.join(__dirname, 'data', 'episodes.csv'));
 
-        const colorProcessor = new colorsCsvProcessor(path.join(__dirname, 'data', 'colors.csv'));
-        const subjectsProcessor = new subjectsCsvProcessor(path.join(__dirname, 'data', 'subjects.csv'));
-
-        await episodesProcesser.processFile();
-        await colorProcessor.processFile();
-        await subjectsProcessor.processFile();
-
-        console.log('Data processing complete!');
+class normalizedDataProcessor {
+    constructor() {
+        this.episodeData = {};
+        this.csvWriter = createObjectCsvWriter({
+            path: path.join(__dirname, 'data', 'normalized_data.csv'),
+            header: [
+                { id: 'episode_id', title: 'episode_id' },
+                { id: 'season', title: 'season' },
+                { id: 'episode', title: 'episode' },
+                { id: 'painting_title', title: 'painting_title '},
+                { id: 'colors', title: 'colors' },
+                { id: 'subjects', title: 'subjects' }
+            ]
+        });
     }
+    
+    async processData() {
+        const colorProcessor = new colorsCsvProcessor(path.join(__dirname, 'data', 'colors.csv'), this.episodeData);
+        const subjectProcessor = new subjectsCsvProcessor(path.join(__dirname, 'data', 'subjects.csv'), this.episodeData);
+        
+        await colorProcessor.processFile();
+        await subjectProcessor.processFile();
 
+        const combinedData = Object.values(this.episodeData);
+        if (combinedData.length > 0) {
+            await this.csvWriter.writeRecords(combinedData);
+            console.log('Normalized data saved to CSV', path.join(__dirname, 'data', 'normalized_data.csv'));
+        }
+    }
+}
+
+async function processAllData() {
+    const processor = new normalizedDataProcessor();
+    await processor.processData();
+    console.log('Data processing complete!');
+}
 processAllData().catch(err => console.error('Error processing data', err));
