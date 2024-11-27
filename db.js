@@ -17,54 +17,125 @@ connection.connect(err => {
     console.log('Connected to the database!');
 });
 
-function insertEpisodes(episodes) {
-    episodes.forEach((episode) => {
+function normalizeTitle(title) {
+    return title
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, '');
+}
+
+async function insertEpisodes(episodes) {
+    for (const episode of episodes) {
+        
+        const existingEpisodeId = await findEpisodeIdbyTitle(episode.painting_title);
+        
+        if (existingEpisodeId) {
+            console.log(`episode with title "${episode.painting_title}" already exists with ID ${existingEpisodeId}`);
+
+            await insertSubjects([{ episode_id: existingEpisodeId, subjects: episode.subjects }]);
+            await insertColors([{ episode_id: existingEpisodeId, colors: episode.colors }]);
+        } else {
+            const episodeId = await insertEpisode(episode);
+            console.log('Inserting subjects and colors for episode ID:', episodeId);
+            await insertSubjects([{ episode_id: episodeId, subjects: episode.subjects }]);
+            await insertColors([{ episode_id: episodeId, colors: episode.colors }]);
+        }
+    }
+}
+
+function insertEpisode(episode) {
+    return new Promise((resolve, reject) => {
         connection.query(
             `INSERT INTO episodes (painting_title, air_date, month) VALUES (?, ?, ?)`,
             [episode.painting_title, episode.air_date, episode.month],
             (err, results) => {
                 if (err) {
                     console.error('Error inserting episode', err);
-                    return;
+                    return reject(err);
                 }
-                console.log(`Episode inserted! ID: ${results.insertId}`);
-                // insertSubjects(results.insertId);
-                // insertColors(results.insertId);
+                resolve(results.insertId);
             }
         );
     });
 }
 
-function insertSubjects(episodes) {
-    episodes.forEach(episode => {
-        if (episode.subjects && episode.subjects.length > 0) {
-            const episodeId = episode.episode_id;
-            const subjectValues = episode.subjects.map(subject => [episodeId, subject]);
-
-            connection.query(
-                `INSERT INTO subjects (episode_id, subject_name) VALUES ?`,
-                [subjectValues],
-                (err, result) => {
-                    if (err) {
-                        console.error('Error inserting subjects:', err);
-                    } else {
-                        console.log(`Inserted ${result.affectedRows} subjects for episode ID ${episodeId}`);
-                    }
+function findEpisodeIdbyTitle(painting_title) {
+    return new Promise((res, rej) => {
+        const normalizedTitle = normalizeTitle(painting_title);
+        connection.query('SELECT episode_id FROM episodes WHERE LOWER(painting_title) = ?', [normalizedTitle], (err, results) => {
+            if (err) {
+                console.error('Error finding episode ID:', err);
+                return rej(err);
+            } else {
+                if (results.length > 0) {
+                    res(results[0].episode_id);
+                } else {
+                    // console.log('No matching episode found for title:', painting_title);
+                    res(null);
                 }
-            );
-        }
+            }
+        });
     });
 }
 
-function insertColors(colorsData) {
-    console.log('Inserting colors for paintings..');
-    colorsData.forEach(colorEntry => {
-        const parsedColors = colorEntry.colors;
-        console.log('inserting colors for painting:', colorEntry.painting_title);
+function insertSubjects(subjectData) {
 
+    // console.log(subjectData);
+    if (Array.isArray(subjectData)) {
+        subjectData.forEach(subject => {
+            const episodeId = subject.episode_id;
+            const subjects = subject.subjects;
+            if (subjects && subjects.length > 0) {
+                const subjectValues = subjects.map(subject => [episodeId, subject]);
+                connection.query(
+                    `INSERT INTO subjects (episode_id, subject_name) VALUES ?`,
+                    [subjectValues],
+                    (err, result) => {
+                        if (err) {
+                            console.error('Error inserting subjects:', err);
+                        } else {
+                            console.log(`Inserted ${result.affectedRows} subjects for episode ID ${episodeId}`);
+                        }
+                    }
+                );
+            } else {
+                console.log('No subjects to insert for episode ID:', episodeId);
+            }
+        });
+    } else {
+        console.log('expected an array but got:', subjectData);
+    }
+}
+
+function insertColors(colorsData) {
+    // console.log('Inserting colors for paintings..');
+    
+    const values = [];
+    
+    // console.log('colorsData:', colorsData);
+    // console.log('Type of colorsData:', typeof colorsData);
+    if (Array.isArray(colorsData)) {
+        colorsData.forEach(colorEntry => {
+            const episodeId = colorEntry.episode_id;
+            const parsedColors = colorEntry.colors;
+            // console.log('parsed colors:', parsedColors);
+    
+            //console.log('inserting colors for painting:', colorEntry.painting_title);
+            if (Array.isArray(parsedColors) && parsedColors.length > 0) {
+                parsedColors.forEach(color => {
+                    const colorName = color.trim();
+                    if (colorName) {
+                    values.push([episodeId, colorName]);
+                    }
+                });
+            }
+        });
+    }
+
+    if (values.length > 0) {
         connection.query(
-            `INSERT INTO colors (painting_title, colors) VALUES (?, ?)`,
-            [colorEntry.painting_title, JSON.stringify(parsedColors)],
+            `INSERT INTO colors (episode_id, color_name) VALUES ?`,
+            [values],
             (err, result) => {
                 if (err) {
                     console.error('Error inserting colors:', err);
@@ -73,13 +144,15 @@ function insertColors(colorsData) {
                 }
             }
         );
-    });
+    }
 }
 
 
 module.exports = {
     connection,
+    findEpisodeIdbyTitle,
     insertEpisodes,
     insertColors,
-    insertSubjects
+    insertSubjects,
+    normalizeTitle
 };
