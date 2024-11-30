@@ -17,12 +17,6 @@ connection.connect(err => {
     console.log('Connected to the database!');
 });
 
-function normalizeTitle(title) {
-    return title
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9 ]/g, '');
-}
 
 async function insertEpisodes(episodes) {
     for (const episode of episodes) {
@@ -59,24 +53,6 @@ function insertEpisode(episode) {
     });
 }
 
-function findEpisodeIdbyTitle(painting_title) {
-    return new Promise((res, rej) => {
-        const normalizedTitle = normalizeTitle(painting_title);
-        connection.query('SELECT episode_id FROM episodes WHERE LOWER(painting_title) = ?', [normalizedTitle], (err, results) => {
-            if (err) {
-                console.error('Error finding episode ID:', err);
-                return rej(err);
-            } else {
-                if (results.length > 0) {
-                    res(results[0].episode_id);
-                } else {
-                    // console.log('No matching episode found for title:', painting_title);
-                    res(null);
-                }
-            }
-        });
-    });
-}
 
 function insertSubjects(subjectData) {
 
@@ -150,9 +126,7 @@ function insertColors(colorsData) {
 
 module.exports = {
     connection,
-    findEpisodeIdbyTitle,
     insertEpisodes,
     insertColors,
-    insertSubjects,
-    normalizeTitle
+    insertSubjects
 };
