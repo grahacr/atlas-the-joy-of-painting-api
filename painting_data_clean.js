@@ -108,20 +108,49 @@ class colorsCsvProcessor extends csvProcessor {
         const season = dataRow['season'];
         const episode = dataRow['episode'];
 
+        // console.log(`Processing painting: ${cleanedTitle} with colors: ${colors}`);
+
         if (!colors || typeof colors !== 'string') {
             console.log('No color data found for painting:', cleanedTitle);
             return;
         }
         
-        const episodeId = `${season}${episode}`;
-        if (this.episodeData[episodeId]) {
-            this.episodeData[episodeId].colors += (
-                this.episodeData[episodeId].colors ? ', ' : '') + colors.split(',').map(
-                    color => color.trim()).join(', ');
+        try {
+            const colorRegex = /\s*'([^']+)'\s*/g;
+            let match;
+            const validColors = [];
+
+            while ((match = colorRegex.exec(colors)) !== null) {
+                const color = match[1].trim();
+                if (color) {
+                    console.log('color:', color);
+                    validColors.push(color);
                 }
             }
-        }
+            if (validColors.length === 0) {
+                console.log('No valid colors for painting:', cleanedTitle);
+                return;
+            }
+            console.log('Valid colors:', validColors);
 
+            const episodeId = `S${season.padStart(2, '0')}E${episode.padStart(2, '0')}`;
+            if (this.episodeData[episodeId]) {
+                const existingColors = this.episodeData[episodeId].colors || '';
+                const newColors = validColors.join(', ');
+
+                console.log(`Adding colors to episode ${episodeId}: ${newColors}`);
+
+                if (newColors) {
+                    this.episodeData[episodeId].colors += (existingColors ? ', ' : '') + newColors;
+                }
+            } else {
+                console.log(`No episode data found for ${episodeId} to add colors`);
+            } 
+        } catch (err) {
+            console.error(`Error parsing color data for painting: ${cleanedTitle}`, err);
+        }
+    }
+}
 
 class normalizedDataProcessor {
     constructor() {
@@ -132,7 +161,7 @@ class normalizedDataProcessor {
                 { id: 'episode_id', title: 'episode_id' },
                 { id: 'season', title: 'season' },
                 { id: 'episode', title: 'episode' },
-                { id: 'painting_title', title: 'painting_title '},
+                { id: 'painting_title', title: 'painting_title'},
                 { id: 'colors', title: 'colors' },
                 { id: 'subjects', title: 'subjects' }
             ]
@@ -148,7 +177,7 @@ class normalizedDataProcessor {
 
         const combinedData = Object.values(this.episodeData);
         if (combinedData.length > 0) {
-            console.log('Data to write:', combinedData);
+            // console.log('Data to write:', combinedData);
             await this.csvWriter.writeRecords(combinedData);
             console.log('Normalized data saved to CSV', path.join(__dirname, 'data', 'normalized_data.csv'));
         } else {
