@@ -24,12 +24,16 @@ function queryPaintings(subject, color, callback) {
     let params = [];
 
     if (subject) {
-        query += " AND subjects LIKE ?";
-        params.push(`%${subject}%`);
+        let subjects = subject.split(',').map(s => `%${s.trim()}%`);
+        let subjectPlaceholders = subjects.map(() => 'subjects LIKE ?').join(' OR ');
+        query += ` AND (${subjectPlaceholders})`;
+        params.push(...subjects);
     }
     if (color) {
-        query += " AND colors LIKE ?";
-        params.push(`%${color}%`);
+        let colors = color.split(',').map(c => `%${c.trim()}%`);
+        let colorPlaceholders = colors.map(() => 'colors LIKE ?').join(' OR ');
+        query += ` AND (${colorPlaceholders})`;
+        params.push(...colors);
     }
 
     connection.execute(query, params, (err, results) => {
