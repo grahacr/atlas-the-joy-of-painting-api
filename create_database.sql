@@ -9,5 +9,6 @@ CREATE TABLE IF NOT EXISTS paintings (
     episode INT,
     painting_title VARCHAR(255),
     colors TEXT,
-    subjects TEXT
+    subjects TEXT,
+    image VARCHAR(255)
 );

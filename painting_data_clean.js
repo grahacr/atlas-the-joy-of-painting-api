@@ -107,6 +107,7 @@ class colorsCsvProcessor extends csvProcessor {
         const colors = dataRow['colors']?.trim();
         const season = dataRow['season'];
         const episode = dataRow['episode'];
+        const image = dataRow['img_src'];
 
         // console.log(`Processing painting: ${cleanedTitle} with colors: ${colors}`);
 
@@ -143,6 +144,7 @@ class colorsCsvProcessor extends csvProcessor {
                 if (newColors) {
                     this.episodeData[episodeId].colors += (existingColors ? ', ' : '') + newColors;
                 }
+                this.episodeData[episodeId].image = image;
             } else {
                 console.log(`No episode data found for ${episodeId} to add colors`);
             } 
@@ -163,7 +165,8 @@ class normalizedDataProcessor {
                 { id: 'episode', title: 'episode' },
                 { id: 'painting_title', title: 'painting_title'},
                 { id: 'colors', title: 'colors' },
-                { id: 'subjects', title: 'subjects' }
+                { id: 'subjects', title: 'subjects' },
+                { id: 'image', title: 'image'}
             ]
         });
     }

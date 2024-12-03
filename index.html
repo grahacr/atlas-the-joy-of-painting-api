@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bob Ross Episode Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Search for Paintings</h1>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <label for="subject" class="form-label">Subjects</label>
+                <select id="subject" name="subject" class="form-select" multiple>
+                    <option value="">Select Subject</option>
+                    <option value="APPLE_FRAME">Apple Frame</option>
+                    <option value="AURORA_BOREALIS">Aurora Borealis</option>
+                    <option value="BARN">Barn</option>
+                    <option value="BEACH">Beach</option>
+                    <option value="BOAT">Boat</option>
+                    <option value="BRIDGE">Bridge</option>
+                    <option value="BUILDING">Building</option>
+                    <option value="BUSHES">Bushes</option>
+                    <option value="CABIN">Cabin</option>
+                    <option value="CACTUS">Cactus</option>
+                    <option value="CIRCLE_FRAME">Circle Frame</option>
+                    <option value="CIRRUS">Cirrus</option>
+                    <option value="CLIFF">Cliff</option>
+                    <option value="CLOUDS">Clouds</option>
+                    <option value="CONIFER">Conifer</option>
+                    <option value="CUMULUS">Cumulus</option>
+                    <option value="DECIDUOUS">Deciduous</option>
+                    <option value="DIANE_ANDRE">Diane Andre</option>
+                    <option value="DOCK">Dock</option>
+                    <option value="DOUBLE_OVAL_FRAME">Double Oval Frame</option>
+                    <option value="FARM">Farm</option>
+                    <option value="FENCE">Fence</option>
+                    <option value="FIRE">Fire</option>
+                    <option value="FLORIDA_FRAME">Florida Frame</option>
+                    <option value="FLOWERS">Flowers</option>
+                    <option value="FRAMED">Framed</option>
+                    <option value="GRASS">Grass</option>
+                    <option value="FOG">Fog</option>
+                    <option value="GUEST">Guest</option>
+                    <option value="HALF_CIRCLE_FRAME">Half Circle Frame</option>
+                    <option value="HALF_OVAL_FRAME">Half Oval Frame</option>
+                    <option value="HILLS">Hills</option>
+                    <option value="LAKE">Lake</option>
+                    <option value="LAKES">Lakes</option>
+                    <option value="LIGHTHOUSE">Lighthouse</option>
+                    <option value="MILL">Mill</option>
+                    <option value="MOON">Moon</option>
+                    <option value="MOUNTAIN">Mountain</option>
+                    <option value="MOUNTAINS">Mountains</option>
+                    <option value="NIGHT">Night</option>
+                    <option value="OCEAN">Ocean</option>
+                    <option value="OVAL_FRAME">Oval Frame</option>
+                    <option value="PALM_TREES">Palm Trees</option>
+                    <option value="PATH">Path</option>
+                    <option value="PERSON">Person</option>
+                    <option value="PORTRAIT">Portrait</option>
+                    <option value="RECTANGLE_3D_FRAME">Rectangle 3D Frame</option>
+                    <option value="RECTANGULAR_FRAME">Rectangular Frame</option>
+                    <option value="RIVER">River</option>
+                    <option value="ROCKS">Rocks</option>
+                    <option value="SEASHELL_FRAME">Seashell Frame</option>
+                    <option value="SNOW">Snow</option>
+                    <option value="SNOWY_MOUNTAIN">Snowy Mountain</option>
+                    <option value="SPLIT_FRAME">Split Frame</option>
+                    <option value="STEVE_ROSS">Steve Ross</option>
+                    <option value="STRUCTURE">Structure</option>
+                    <option value="SUN">Sun</option>
+                    <option value="TOMB_FRAME">Tomb Frame</option>
+                    <option value="TREE">Tree</option>
+                    <option value="TREES">Trees</option>
+                    <option value="TRIPLE_FRAME">Triple Frame</option>
+                    <option value="WATERFALL">Waterfall</option>
+                    <option value="WAVES">Waves</option>
+                    <option value="WINDMILL">Windmill</option>
+                    <option value="WINDOW_FRAME">Window Frame</option>
+                    <option value="WINTER">Winter</option>
+                    <option value="WOOD_FRAMED">Wood Framed</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="color" class="form-label">Colors</label>
+                <select id="color" name="color" class="form-select" multiple>
+                    <option value="Black Gesso">Black Gesso</option>
+                    <option value="Bright Red">Bright Red</option>
+                    <option value="Burnt Umber">Burnt Umber</option>
+                    <option value="Cadmium Yellow">Cadmium Yellow</option>
+                    <option value="Dark Sienna">Dark Sienna</option>
+                    <option value="Indian Red">Indian Red</option>
+                    <option value="Indian Yellow">Indian Yellow</option>
+                    <option value="Liquid Black">Liquid Black</option>
+                    <option value="Liquid Clear">Liquid Clear</option>
+                    <option value="Midnight Black">Midnight Black</option>
+                    <option value="Phthalo Blue">Phthalo Blue</option>
+                    <option value="Phthalo Green">Phthalo Green</option>
+                    <option value="Prussian Blue">Prussian Blue</option>
+                    <option value="Sap Green">Sap Green</option>
+                    <option value="Titanium White">Titanium White</option>
+                    <option value="Van Dyke Brown">Van Dyke Brown</option>
+                    <option value="Yellow Ochre">Yellow Ochre</option>
+                    <option value="Alizarin Crimson">Alizarin Crimson</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="matchType" class="form-label">How do you want to search?</label>
+                <select id="matchType" name="matchType" class="form-select">
+                    <option value="all">All filters must apply</option>
+                    <option value="any">Any filters can apply</option>
+                </select>
+            </div>
+        </div>
+        <button onclick="searchPaintings()" class="btn btn-primary w-100">Find episodes!</button>
+        <div id="results" class="row mt-4"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <script src="./script.js"></script>
+</body>
+</html>

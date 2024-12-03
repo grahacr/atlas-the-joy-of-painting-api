@@ -1,6 +1,8 @@
 require('dotenv').config();
+const { doesNotMatch } = require('assert');
 const express = require('express');
 const mysql = require('mysql2');
+const path = require('path');
 const app = express();
 const port = 3000;
 
@@ -19,40 +21,53 @@ connection.connect((err) => {
     }
 });
 
-function queryPaintings(subject, color, callback) {
+function queryPaintings(subject, color, matchType, callback) {
     let query = "SELECT * FROM paintings WHERE 1=1";
     let params = [];
+    console.log('Executing query:', query);
 
     if (subject) {
         let subjects = subject.split(',').map(s => `%${s.trim()}%`);
-        let subjectPlaceholders = subjects.map(() => 'subjects LIKE ?').join(' OR ');
-        query += ` AND (${subjectPlaceholders})`;
+        let subjectCondition = subjects.map(() => 'subjects LIKE ?').join(matchType === 'all' ? ' AND ' : ' OR ');
+        query += ` AND (${subjectCondition})`;
         params.push(...subjects);
     }
     if (color) {
         let colors = color.split(',').map(c => `%${c.trim()}%`);
-        let colorPlaceholders = colors.map(() => 'colors LIKE ?').join(' OR ');
-        query += ` AND (${colorPlaceholders})`;
+        let colorCondition = colors.map(() => 'colors LIKE ?').join(matchType === 'all' ? ' AND ' : ' OR ');
+        query += ` AND (${colorCondition})`;
         params.push(...colors);
     }
+    console.log('Executing query:', query);
 
     connection.execute(query, params, (err, results) => {
         if (err) {
             console.error('Error executing query:', err);
             callback(err, null);
+        } else {
+            callback(null, results);
         }
-        callback(null, results);
     });
 }
 
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 app.get('/api/paintings', (req, res) => {
-    const { subject, color } = req.query;
-    console.log(`Received query with subject: ${subject} and color(s): ${color}`);
-    queryPaintings(subject, color, (err, paintings) => {
+    const { subject, color, matchType = 'all' } = req.query;
+    console.log(`Received query with subject: ${subject} and color(s): ${color}, ${matchType}`);
+    queryPaintings(subject, color, matchType, (err, paintings) => {
         if (err) {
             return res.status(500).json({ error: 'Dabase query error' });
         }
-        return res.json(paintings)
+        if (paintings.length === 0) {
+            res.json({ message: 'No paintings found' });
+        } else {
+            return res.json(paintings)
+        }
     });
 });
 

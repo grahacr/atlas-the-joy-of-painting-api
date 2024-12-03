@@ -23,14 +23,14 @@ connection.connect(err => {
 fs.createReadStream('./data/normalized_data.csv')
     .pipe(csv())
     .on('data', (row) => {
-        const { episode_id, season, episode, painting_title, colors, subjects } = row;
+        const { episode_id, season, episode, painting_title, colors, subjects, image } = row;
         const seasonInt = parseInt(season, 10);
         const episodeInt = parseInt(episode, 10);
 
         const query = `
-        INSERT INTO paintings (episode_id, season, episode, painting_title, colors, subjects)
-        VALUES (?, ?, ?, ?, ?, ?)`;
-        connection.execute(query, [episode_id, season, episode, painting_title, colors, subjects]);
+        INSERT INTO paintings (episode_id, season, episode, painting_title, colors, subjects, image)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        connection.execute(query, [episode_id, season, episode, painting_title, colors, subjects, image]);
     })
     .on('end', () => {
         console.log('Data loaded into mySQL');
