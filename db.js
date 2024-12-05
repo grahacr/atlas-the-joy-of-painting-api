@@ -28,7 +28,7 @@ fs.createReadStream('./data/normalized_data.csv')
         const episodeInt = parseInt(episode, 10);
 
         const query = `
-        INSERT INTO paintings (episode_id, season, episode, painting_title, colors, subjects, image)
+        INSERT IGNORE INTO paintings (episode_id, season, episode, painting_title, colors, subjects, image)
         VALUES (?, ?, ?, ?, ?, ?, ?)`;
         connection.execute(query, [episode_id, season, episode, painting_title, colors, subjects, image]);
     })
