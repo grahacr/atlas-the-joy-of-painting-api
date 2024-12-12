@@ -2,38 +2,46 @@
 let currentPage = 1;
 const itemsPerPage = 16;
 
-function searchPaintings() {
-    const subject = document.getElementById('subject').value.trim();
-    const colorElements = document.getElementById('color').selectedOptions;
-    const matchType = document.getElementById('matchType').value || 'all';
-    let colors = '';
-    if (colorElements.length > 0) {
-        colors = Array.from(colorElements).map(option => option.value).join(',');
-    }
-    if (!subject && !colors) {
-        console.error('No subjects or colors selected');
-        return;
-    }
-
-    let query = '';
-    if (subject) query += `subject=${subject}&`;
-    if (colors) query += `color=${colors}&`;
-    query += `matchType=${matchType}&page=${currentPage}&limit=${itemsPerPage}`;
-    console.log('sending query:', query);
-
-    fetch(`/api/paintings?${query}`)
-        .then(response => response.json())
-        .then(data => {
-            console.log("Fetched data:", data);
-            displayResults(data.paintings);
-            setupPagination(data.totalPages, data.currentPage);
-        })
-        .catch(error => {
-            console.error('Error fetching data:', error);
-        });
-}
-
-function displayResults(paintings) {
+function searchPaintings(page = 1) {
+  currentPage = page;
+  console.log('current page:', currentPage);
+  
+  const subject = document.getElementById('subject').value.trim();
+  const colorElements = document.getElementById('color').selectedOptions;
+  const matchType = document.getElementById('matchType').value || 'all';
+  let colors = '';
+  if (colorElements.length > 0) {
+    colors = Array.from(colorElements).map(option => option.value).join(',');
+  }
+  if (!subject && !colors) {
+    console.error('No subjects or colors selected');
+    return;
+  }
+    
+  let query = '';
+  if (subject) query += `subject=${encodeURIComponent(subject)}&`;
+  if (colors) query += `color=${encodeURIComponent(colors)}&`;
+  query += `matchType=${encodeURIComponent(matchType)}&page=${currentPage}&limit=${itemsPerPage}`;
+  console.log('sending query:', query);
+    
+  fetch(`/api/paintings?${query}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log("Fetched data:", data);
+      displayResults(data.paintings);
+      setupPagination(data.totalPages, data.currentPage);
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+    });
+  }
+  
+  function displayResults(paintings) {
     const resultsContainer = document.getElementById('results');
     resultsContainer.innerHTML = '';
     if (!paintings || paintings.length === 0) {
@@ -56,34 +64,48 @@ function displayResults(paintings) {
         `;
         resultsContainer.appendChild(card);
     });
-}
-
-function setupPagination(totalPages, currentPage) {
+  }
+  
+  function setupPagination(totalPages, currentPage) {
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
-
+    
     for (let i = 1; i <= totalPages; i++) {
       const button = document.createElement('li');
       button.className = 'page-item';
-      button.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+      button.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
       button.addEventListener('click', function(event) {
         event.preventDefault();
-        currentPage = i;
-        searchPaintings();
+        const page = this.querySelector('a').getAttribute('data-page');
+        const pageNumber = parseInt(page);
+        console.log('parse page:', pageNumber);
+        if (isNaN(pageNumber)) {
+          console.error('Invalid page number:', page);
+          return;
+        }
+        searchPaintings(pageNumber);
       });
       pagination.appendChild(button);
     }
     updatePagination(currentPage);
   }
-
+  
   function updatePagination(currentPage) {
     const pagination = document.getElementById('pagination');
-    const buttons = pagination.getElementsByClassName('page-item');
+    const buttons = pagination.querySelectorAll('.page-item');
+
     Array.from(buttons).forEach(button => {
       button.classList.remove('active');
     });
-    const currentPageButton = Array.from(buttons).find(button => parseInt(button.textContent) === currentPage);
+   
+    const currentPageButton = pagination.querySelector(`a[data-page="${currentPage}"]`);
     if (currentPageButton) {
       currentPageButton.classList.add('active');
     }
   }
+  
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelector('button').addEventListener('click', () => {
+      searchPaintings(1);
+    });
+  });

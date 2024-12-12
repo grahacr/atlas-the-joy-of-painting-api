@@ -49,6 +49,7 @@ function queryPaintings(subject, color, matchType, offset, limit, callback) {
             console.error('Error executing query:', err);
             callback(err, null);
         } else {
+            console.log('Query results:', results);
             callback(null, results);
         }
     });
@@ -61,28 +62,28 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/paintings', (req, res) => {
-    const { subject, color, matchType = 'all', page = Number(req.query.page), limit = Number(req.query.limit) } = req.query;
-    const offset = (page - 1) * limit;
-    console.log(`Received query with subject: ${subject} and color(s): ${color}, ${matchType}, page: ${page}, limit: ${limit}`);
-
-    queryPaintings(subject, color, matchType, offset, limit, (err, paintings) => {
+    const { subject, color, matchType = 'all', page = 1, limit = 16 } = req.query;
+    const pageNumber = parseInt(page);
+    if (isNaN(pageNumber) || pageNumber < 1) {
+        return res.status(400).json({ error: 'invalid page number' });
+    }
+    const offset = (pageNumber - 1) * limit;
+    console.log(`Received query with subject: ${subject} and color(s): ${color}, ${matchType}, page: ${pageNumber}, limit: ${limit}`);
+    console.log(`Calculated offset: ${offset}`);
+    
+    connection.execute("SELECT COUNT(*) AS total FROM paintings WHERE 1=1", (err, countResult) => {
         if (err) {
-            return res.status(500).json({ error: 'Dabase query error' });
+            return res.status(500).json({ error: 'Error counting paintings' });
         }
-        if (paintings.length === 0) {
-            return res.json({ message: 'No paintings found' });
-        }
-
-        connection.execute("SELECT COUNT(*) AS total FROM paintings WHERE 1=1", (err, countResult) => {
+        const totalRecords = countResult[0].total;
+        const totalPages = Math.ceil(totalRecords / limit);
+        queryPaintings(subject, color, matchType, offset, limit, (err, paintings) => {
             if (err) {
-                return res.status(500).json({ error: 'Error counting paintings' });
+                return res.status(500).json({ error: 'Dabase query error' });
             }
-
-            const totalRecords = countResult[0].total;
-            const totalPages = Math.ceil(totalRecords / limit);
             res.json({
                 paintings,
-                currentPage: parseInt(page),
+                currentPage: pageNumber,
                 totalPages: totalPages
             });
         });
