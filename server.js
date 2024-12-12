@@ -38,7 +38,7 @@ connection.connect((err) => {
 function queryPaintings(subject, color, matchType, offset, limit, callback) {
     let query = "SELECT * FROM paintings WHERE 1=1";
     let params = [];
-    console.log('initial query:', query);
+    logger.info('initial query:', { query });
 
     if (subject && subject.trim() !== '') {
         let subjects = subject.split(',').map(s => `%${s.trim()}%`);
@@ -54,15 +54,15 @@ function queryPaintings(subject, color, matchType, offset, limit, callback) {
     }
     query += ` LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
 
-    console.log('Executing final query:', query);
-    console.log('final params:', params);
+    logger.info('Executing final query:', { query });
+    logger.info('final params:', { params });
 
     connection.execute(query, params, (err, results) => {
         if (err) {
-            console.error('Error executing query:', err);
+            logger.error('Error executing query:', { error: err });
             callback(err, null);
         } else {
-            console.log('Query results:', results);
+            logger.info('Query results:', { results });
             callback(null, results);
         }
     });
