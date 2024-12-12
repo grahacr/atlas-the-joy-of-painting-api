@@ -6,6 +6,19 @@ const mysql = require('mysql2');
 const path = require('path');
 const app = express();
 const port = 3000;
+const winston = require('winston');
+const { combine, timestamp, json } = winston.format;
+
+const logger = winston.createLogger({
+    level: 'info',
+    format: combine(timestamp(), json()),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({
+            filename: 'log.log',
+        }),
+    ],
+});
 
 const connection = mysql.createConnection({
     host: process.env.DB_HOST,
