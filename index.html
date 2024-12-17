@@ -115,7 +115,12 @@
                 </select>
             </div>
         </div>
-        <button onclick="searchPaintings(1)" class="btn btn-primary w-100">Find episodes!</button>
+
+        <div class="d-flex justify-content-between mb-4">
+            <button onclick="clearFilters()" class="btn btn-secondary">Clear All Filters</button>
+            <button onclick="searchPaintings(1)" class="btn btn-primary w-100">Find episodes!</button>
+        </div>
+
         <div id="results" class="row mt-4"></div>
         <nav aria-label="Page navigation">
             <ul id="pagination" class="pagination justify-content-center"></ul>

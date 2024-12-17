@@ -103,9 +103,27 @@ function searchPaintings(page = 1) {
       currentPageButton.classList.add('active');
     }
   }
+
+  function clearFilters() {
+    document.getElementById('subject').selectedIndex = 0;
+    document.getElementById('color').selectedIndex = 0;
+    document.getElementById('matchType').selectedIndex = 0;
+
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('pagination').innerHTML = '';
+  }
+
   
   document.addEventListener("DOMContentLoaded", () => {
-    document.querySelector('button').addEventListener('click', () => {
+    const searchButton = document.querySelector('.btn-primary');
+    searchButton.addEventListener('click', () => {
+      const subject = document.getElementById('subject').value.trim();
+      const colorElements = document.getElementById('color').selectedOptions;
+
+      if (!subject && colorElements.length === 0) {
+        alert('Please select at least one filter before searching');
+        return;
+      }
       searchPaintings(1);
     });
   });

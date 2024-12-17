@@ -1,8 +1,14 @@
+
 /* card results styling */
 .card {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .card img {
@@ -18,6 +24,7 @@
 .card-title {
     font-size: 18px;
     font-weight: bold;
+    color: #333;
 }
 
 .card-text {
@@ -27,4 +34,25 @@
 
 .card {
     min-height: 350px;
+}
+
+.button {
+    width: 100%;
+    padding: 4px;
+}
+
+@media (max-width: 768px) {
+    .row {
+        display: block;
+    }
+
+    .col-md-4 {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    #toggleFiltersBtn {
+        margin-top: 10px;
+        text-align: center;
+    }
 }
