@@ -47,6 +47,7 @@ To start the MySQL server for querying the data based on certain filters, run th
 ```bash
 node server.js
 ```
+Once running, you will see a message telling you the server is running on localhost at port 3000. From here, the program utilizes the script.js and index.html files to reveal a simple webpage, allowing the user to search for episodes utilizing the front-end interface.
 
 ### 6. Example Command Line query:
 ```bash
@@ -58,3 +59,8 @@ curl "http://localhost:3000/api/paintings?subject=Bushes&color=Alizarin+Crimson"
 ```bash
 http://localhost:3000/api/paintings?subject=Bushes&color=Alizarin%20Crimson
 ```
+
+## Additional Features for Final T4 Project:
+- Pagination
+- JS Unittests
+- Functioning logger
