@@ -4,7 +4,8 @@
   "description": "Bob Ross themed API for episode filtering",
   "main": "painting_data_clean.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test jest"
+
   },
   "keywords": [],
   "author": "",
@@ -17,5 +18,9 @@
     "mysql2": "^3.11.4",
     "papaparse": "^5.4.1",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   }
 }

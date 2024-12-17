@@ -1,13 +1,12 @@
 require('dotenv').config();
-const { doesNotMatch } = require('assert');
-const { countReset } = require('console');
 const express = require('express');
 const mysql = require('mysql2');
 const path = require('path');
-const app = express();
-const port = 3000;
 const winston = require('winston');
 const { combine, timestamp, json } = winston.format;
+
+const app = express();
+const port = process.env.PORT || 3000;
 
 const logger = winston.createLogger({
     level: 'info',
@@ -25,15 +24,29 @@ const connection = mysql.createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
+
 });
 
-connection.connect((err) => {
-    if (err) {
-        console.error('Error connecting to database: ', err);
-    } else {
-        console.log('Connected to MySQL database');
-    }
-});
+function initializeDbConnection() {
+    connection.connect((err) => {
+        if (err) {
+            console.error('Error connecting to database: ', err);
+        } else {
+            console.log('Connected to MySQL database');
+        }
+    });
+}
+
+function startServer() {
+    const server = app.listen(port, () => {
+        console.log(`server running at http://localhost:${port}`);
+        initializeDbConnection();
+    });
+    return server;
+}
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
+}
 
 function queryPaintings(subject, color, matchType, offset, limit, callback) {
     let query = "SELECT * FROM paintings WHERE 1=1";
@@ -81,6 +94,7 @@ app.get('/api/paintings', (req, res) => {
         return res.status(400).json({ error: 'invalid page number' });
     }
     const offset = (pageNumber - 1) * limit;
+
     console.log(`Received query with subject: ${subject} and color(s): ${color}, ${matchType}, page: ${pageNumber}, limit: ${limit}`);
     console.log(`Calculated offset: ${offset}`);
     
@@ -102,6 +116,5 @@ app.get('/api/paintings', (req, res) => {
         });
     });
 });
-app.listen(port, () => {
-    console.log(`server running at http://localhost:${port}`);
-});
+
+module.exports = { app, startServer, connection, initializeDbConnection };
